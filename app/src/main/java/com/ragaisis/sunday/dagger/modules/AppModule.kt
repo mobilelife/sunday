@@ -1,4 +1,4 @@
-package com.ragaisis.sunday.dagger
+package com.ragaisis.sunday.dagger.modules
 
 import com.ragaisis.sunday.MyApplication
 import dagger.Module

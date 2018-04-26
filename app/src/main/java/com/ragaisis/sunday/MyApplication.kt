@@ -1,7 +1,7 @@
 package com.ragaisis.sunday
 
 import android.app.Application
-import com.ragaisis.sunday.dagger.AppModule
+import com.ragaisis.sunday.dagger.modules.AppModule
 import com.ragaisis.sunday.dagger.DaggerMainComponent
 import com.ragaisis.sunday.dagger.MainComponent
 
