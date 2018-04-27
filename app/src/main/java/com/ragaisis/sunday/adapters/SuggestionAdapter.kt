@@ -9,8 +9,10 @@ import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import com.bumptech.glide.Glide
 import com.ragaisis.sunday.R
 import com.ragaisis.sunday.entities.AddressDetailsHomes
+import com.bumptech.glide.request.RequestOptions
 
 class SuggestionAdapter(val context: Context, items: List<AddressDetailsHomes>) : RecyclerView.Adapter<SuggestionAdapter.SuggestionViewHolder>() {
 
@@ -48,6 +50,10 @@ class SuggestionAdapter(val context: Context, items: List<AddressDetailsHomes>) 
                     (price / 100).toString()
             )
         }
+        Glide.with(context)
+                .setDefaultRequestOptions(RequestOptions().error(R.mipmap.ic_launcher))
+                .load(items?.get(position)?.home?.imageUrl)
+                .into(holder.imageView)
         hideIfNoData(holder)
     }
 
