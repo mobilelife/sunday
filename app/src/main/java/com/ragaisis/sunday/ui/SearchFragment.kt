@@ -5,16 +5,13 @@ import android.arch.lifecycle.Observer
 import android.arch.lifecycle.ViewModelProvider
 import android.arch.lifecycle.ViewModelProviders
 import android.content.Context
-import android.database.MatrixCursor
 import android.os.Bundle
-import android.provider.BaseColumns
 import android.support.v4.app.Fragment
-import android.support.v4.widget.SimpleCursorAdapter
 import android.support.v7.widget.SearchView
 import android.view.*
 import com.ragaisis.sunday.MyApplication
 import com.ragaisis.sunday.R
-import com.ragaisis.sunday.entities.AddressSuggestResponse
+import com.ragaisis.sunday.cursors.SuggestionCursorAdapter
 import com.ragaisis.sunday.helpers.ApplicationHelper
 import com.ragaisis.sunday.viewmodels.SearchViewModel
 import javax.inject.Inject
@@ -26,7 +23,7 @@ class SearchFragment : Fragment() {
     lateinit var viewModelFactory: ViewModelProvider.Factory
 
     private lateinit var viewModel: SearchViewModel
-    private lateinit var suggestionAdapter: SimpleCursorAdapter
+    private lateinit var suggestionAdapter: SuggestionCursorAdapter
     private lateinit var searchView: SearchView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,27 +32,8 @@ class SearchFragment : Fragment() {
         setHasOptionsMenu(true)
         viewModel = ViewModelProviders.of(this, viewModelFactory).get(SearchViewModel::class.java)
         viewModel.addressSuggestions.observe(this, Observer {
-            if (it != null) {
-                onAddressSuggestion(it)
-            }
+            suggestionAdapter.swapCursor(it)
         })
-    }
-
-    private fun onAddressSuggestion(suggestions: AddressSuggestResponse) {
-        if (suggestions.listingAddresses != null) {
-            val columns = arrayOf(
-                    BaseColumns._ID,
-                    SearchManager.SUGGEST_COLUMN_TEXT_1,
-                    SearchManager.SUGGEST_COLUMN_INTENT_DATA)
-            val cursor = MatrixCursor(columns)
-            for (i in 0 until suggestions.listingAddresses.size) {
-                cursor.addRow(arrayOf(
-                        Integer.toString(i),
-                        suggestions.listingAddresses.get(i).streetName,
-                        suggestions.listingAddresses.get(i)))
-            }
-            suggestionAdapter.swapCursor(cursor)
-        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -65,12 +43,7 @@ class SearchFragment : Fragment() {
     override fun onPrepareOptionsMenu(menu: Menu) {
         searchView = menu.findItem(R.id.search).actionView as SearchView
         searchView.maxWidth = ApplicationHelper.getScreenWidth(activity)
-        suggestionAdapter = SimpleCursorAdapter(context,
-                R.layout.view_search_suggestion,
-                null,
-                arrayOf(SearchManager.SUGGEST_COLUMN_TEXT_1),
-                intArrayOf(android.R.id.text1),
-                0)
+        suggestionAdapter = SuggestionCursorAdapter(context, null, true)
         searchView.suggestionsAdapter = suggestionAdapter
         searchView.setOnSuggestionListener(object : SearchView.OnSuggestionListener {
             override fun onSuggestionSelect(position: Int): Boolean {
@@ -79,8 +52,9 @@ class SearchFragment : Fragment() {
 
             override fun onSuggestionClick(position: Int): Boolean {
                 val suggestions = viewModel.addressSuggestions.value
-                if (suggestions?.listingAddresses != null) {
-                    searchView.setQuery(suggestions.listingAddresses.get(position).streetName, true)
+                if (suggestions != null) {
+                    val query = suggestions.getString(suggestions.getColumnIndex(SearchManager.SUGGEST_COLUMN_TEXT_1))
+                    searchView.setQuery(query, true)
                 }
                 searchView.clearFocus()
                 return true
