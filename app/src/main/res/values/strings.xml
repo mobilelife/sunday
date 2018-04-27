@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Sunday</string>
+    <string name="price_label">Price</string>
+    <string name="home_area">%s m²</string>
+    <string name="price_kr">%s kr</string>
+    <string name="api_error">Error while getting data</string>
 </resources>
