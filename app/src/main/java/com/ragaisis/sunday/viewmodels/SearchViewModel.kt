@@ -5,16 +5,23 @@ import android.arch.lifecycle.MutableLiveData
 import android.arch.lifecycle.ViewModel
 import android.database.MatrixCursor
 import android.provider.BaseColumns
+import com.ragaisis.sunday.MyApplication
+import com.ragaisis.sunday.R
 import com.ragaisis.sunday.api.SundayApi
 import com.ragaisis.sunday.cursors.SuggestionCursorAdapter.Companion.COLUMN_TYPE
 import com.ragaisis.sunday.cursors.SuggestionCursorAdapter.Companion.COLUMN_TYPE_HEADER
-import com.ragaisis.sunday.entities.AddressSuggestResponse
+import com.ragaisis.sunday.entities.*
+import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.schedulers.Schedulers
 import javax.inject.Inject
 
-class SearchViewModel @Inject constructor(private val api: SundayApi) : ViewModel() {
+class SearchViewModel @Inject constructor(
+        private val application: MyApplication,
+        private val api: SundayApi) : ViewModel() {
 
     var addressSuggestions: MutableLiveData<MatrixCursor> = MutableLiveData()
+    var suggestions: MutableLiveData<List<AddressDetailsHomes>> = MutableLiveData()
+    var error: MutableLiveData<String> = MutableLiveData()
     var searchQuery: String? = null
 
     fun search(query: String) {
@@ -24,6 +31,15 @@ class SearchViewModel @Inject constructor(private val api: SundayApi) : ViewMode
                     .subscribeOn(Schedulers.io())
                     .subscribe { addressSuggestions.postValue(getCursor(it)) }
         }
+    }
+
+    fun getAddressDetails(query: String) {
+        searchQuery = query
+        api.getAddressDetails(AddressDetailsRequest(AddressDetailsAddress((query))))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnError { error.postValue(application.getString(R.string.api_error)) }
+                .subscribe { suggestions.value = it.homes }
     }
 
     private fun getCursor(suggestions: AddressSuggestResponse): MatrixCursor {

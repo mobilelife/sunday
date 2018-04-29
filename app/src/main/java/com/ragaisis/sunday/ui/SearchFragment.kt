@@ -13,15 +13,10 @@ import android.view.*
 import android.widget.Toast
 import com.ragaisis.sunday.MyApplication
 import com.ragaisis.sunday.R
-import com.ragaisis.sunday.api.SundayApi
 import com.ragaisis.sunday.adapters.SuggestionAdapter
 import com.ragaisis.sunday.cursors.SuggestionCursorAdapter
-import com.ragaisis.sunday.entities.AddressDetailsAddress
-import com.ragaisis.sunday.entities.AddressDetailsRequest
 import com.ragaisis.sunday.helpers.ApplicationHelper
 import com.ragaisis.sunday.viewmodels.SearchViewModel
-import io.reactivex.android.schedulers.AndroidSchedulers
-import io.reactivex.schedulers.Schedulers
 import kotlinx.android.synthetic.main.fragment_search.*
 import javax.inject.Inject
 
@@ -30,8 +25,6 @@ class SearchFragment : Fragment() {
 
     @Inject
     lateinit var viewModelFactory: ViewModelProvider.Factory
-    @Inject
-    lateinit var api: SundayApi
 
     private lateinit var viewModel: SearchViewModel
     private lateinit var suggestionAdapter: SuggestionCursorAdapter
@@ -43,9 +36,31 @@ class SearchFragment : Fragment() {
         (activity!!.application as MyApplication).mainComponent.inject(this)
         setHasOptionsMenu(true)
         viewModel = ViewModelProviders.of(this, viewModelFactory).get(SearchViewModel::class.java)
+        initViewModels()
+    }
+
+    private fun initViewModels() {
         viewModel.addressSuggestions.observe(this, Observer {
             suggestionAdapter.swapCursor(it)
         })
+        viewModel.error.observe(this, Observer {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.error.value = null
+        })
+        viewModel.suggestions.observe(this, Observer {
+            adapter.items = it
+            updateListVisibility()
+        })
+    }
+
+    private fun updateListVisibility() {
+        if (adapter.items != null && adapter.items!!.isNotEmpty()) {
+            emptyPlaceholderTextView.visibility = View.GONE
+            recyclerView.visibility = View.VISIBLE
+        } else {
+            emptyPlaceholderTextView.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -54,9 +69,13 @@ class SearchFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        adapter = SuggestionAdapter(context!!, emptyList())
+        emptyPlaceholderTextView.visibility = View.GONE
+        recyclerView.visibility = View.VISIBLE
+        val list = viewModel.suggestions.value
+        adapter = SuggestionAdapter(context!!, if (list != null) list else emptyList())
         recyclerView.adapter = adapter
         recyclerView.layoutManager = LinearLayoutManager(context)
+        updateListVisibility()
     }
 
     override fun onPrepareOptionsMenu(menu: Menu) {
@@ -74,15 +93,7 @@ class SearchFragment : Fragment() {
                 if (suggestions != null) {
                     val query = suggestions.getString(suggestions.getColumnIndex(SearchManager.SUGGEST_COLUMN_TEXT_1))
                     searchView.setQuery(query, true)
-                    api.getAddressDetails(AddressDetailsRequest(AddressDetailsAddress((query))))
-                            .subscribeOn(Schedulers.io())
-                            .observeOn(AndroidSchedulers.mainThread())
-                            .doOnError {
-                               Toast.makeText(context, getString(R.string.api_error), Toast.LENGTH_SHORT).show()
-                            }
-                            .subscribe {
-                                adapter.items = it.homes
-                            }
+                    viewModel.getAddressDetails(query)
                 }
                 searchView.clearFocus()
                 return true
