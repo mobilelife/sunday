@@ -4,4 +4,5 @@
     <string name="home_area">%s m²</string>
     <string name="price_kr">%s kr</string>
     <string name="api_error">Error while getting data</string>
+    <string name="empty_list_placeholder">Try to use Search</string>
 </resources>
